@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>筋トレフォーム図鑑 Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        /* スムーズな開閉アニメーション用 */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+        }
+        .accordion-content.open {
+            max-height: 1200px;
+            transition: max-height 0.4s ease-in, padding 0.4s ease-in;
+        }
+    </style>
+</head>
+<body class="pb-16">
+
+    <header class="bg-[#1e1e1e] border-b border-[#2d2d2d] sticky top-0 z-50 px-4 py-4 text-center shadow-md">
+        <h1 class="text-xl font-bold text-[#ff9f43] tracking-wider flex items-center justify-center gap-2">
+            <i class="fa-solid fa-dumbbell text-2xl animate-pulse"></i> WORKOUT GUIDE PRO
+        </h1>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 mt-5">
+
+        <div class="relative mb-5">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input type="text" id="search-input" oninput="handleSearch()" 
+                   class="w-full bg-[#1e1e1e] border border-[#2d2d2d] rounded-xl py-3 pl-10 pr-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff9f43] focus:border-transparent transition-all" 
+                   placeholder="種目名、部位、キーワードで検索...">
+        </div>
+        
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 block mb-2 px-1">TARGET AREA / 対象部位</label>
+            <div class="flex bg-[#1e1e1e] p-1 rounded-xl border border-[#2d2d2d] overflow-x-auto scrollbar-none gap-1">
+                <button onclick="setAreaFilter('all')" id="area-all" class="flex-1 whitespace-nowrap text-center py-2 px-3 text-xs font-bold rounded-lg bg-[#ff9f43] text-[#121212] transition-all">
+                    すべて
+                </button>
+                <button onclick="setAreaFilter('upper')" id="area-upper" class="flex-1 whitespace-nowrap text-center py-2 px-3 text-xs font-bold text-gray-400 rounded-lg transition-all">
+                    上半身
+                </button>
+                <button onclick="setAreaFilter('lower')" id="area-lower" class="flex-1 whitespace-nowrap text-center py-2 px-3 text-xs font-bold text-gray-400 rounded-lg transition-all">
+                    下半身
+                </button>
+                <button onclick="setAreaFilter('core')" id="area-core" class="flex-1 whitespace-nowrap text-center py-2 px-3 text-xs font-bold text-gray-400 rounded-lg transition-all">
+                    体幹
+                </button>
+                <button onclick="setAreaFilter('cardio')" id="area-cardio" class="flex-1 whitespace-nowrap text-center py-2 px-3 text-xs font-bold text-gray-400 rounded-lg transition-all">
+                    有酸素
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="text-xs font-bold text-gray-500 block mb-2 px-1">EQUIPMENT TYPE / 器具タイプ</label>
+            <div class="grid grid-cols-4 bg-[#1e1e1e] p-1 rounded-xl border border-[#2d2d2d] gap-1">
+                <button onclick="setTypeFilter('all')" id="type-all" class="text-center py-1.5 text-[11px] font-bold rounded-md bg-[#2d2d2d] text-[#ff9f43] transition-all">
+                    すべて
+                </button>
+                <button onclick="setTypeFilter('machine')" id="type-machine" class="text-center py-1.5 text-[11px] font-bold text-gray-400 rounded-md transition-all">
+                    マシン
+                </button>
+                <button onclick="setTypeFilter('dumbbell')" id="type-dumbbell" class="text-center py-1.5 text-[11px] font-bold text-gray-400 rounded-md transition-all">
+                    ダンベル
+                </button>
+                <button onclick="setTypeFilter('body')" id="type-body" class="text-center py-1.5 text-[11px] font-bold text-gray-400 rounded-md transition-all">
+                    自重
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4 px-1 text-xs text-gray-500">
+            <span id="result-count">該当: 0 種目</span>
+            <span id="filter-status" class="italic"></span>
+        </div>
+
+        <div id="workout-list" class="space-y-4">
+            </div>
+
+        <div id="no-results" class="hidden text-center py-12">
+            <i class="fa-solid fa-face-frown text-5xl text-gray-600 mb-3"></i>
+            <p class="text-gray-400 font-bold">該当する種目が見つかりませんでした</p>
+            <p class="text-gray-600 text-xs mt-1">別のキーワードやフィルターをお試しください</p>
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // 筋トレ種目データベース (全21種目・配列管理)
+        // ==========================================
+        const workoutData = [
+            // --- ダンベル種目 ---
+            {
+                id: "dumbbell-press",
+                name: "ダンベル・ベンチプレス",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "dumbbell",
+                typeLabel: "ダンベル",
+                target: "胸（大胸筋全体）・肩（三角筋前部）・二の腕",
+                form: "フラットベンチに仰向けになり、両足を床につけます。胸を張り肩甲骨を寄せ、ダンベルを胸の横から真上に向けて押し上げます。押し上げた際にダンベル同士をトップで軽く近づけます。",
+                ng: "肩甲骨が立ち、肩がすくんだ状態でプレスを行うと、大胸筋ではなく肩関節を痛めやすくなります。また、足が床から浮くのも危険です。",
+                tip: "バーベルと異なり可動域を広く取れるのが利点です。ダンベルが胸の高さよりやや低くなる位置まで深く下ろすと、大胸筋が強くストレッチされます。",
+                svg: `
+                <svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1">
+                    <style>
+                        @keyframes db-press { 0%, 100% { transform: translate(0px, 0px); } 50% { transform: translate(12px, -30px); } }
+                        @keyframes db-press-left { 0%, 100% { transform: translate(0px, 0px); } 50% { transform: translate(-12px, -30px); } }
+                        @keyframes chest-db-glow { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+                        .db-right { animation: db-press 2.5s infinite ease-in-out; }
+                        .db-left { animation: db-press-left 2.5s infinite ease-in-out; }
+                        .chest-db { animation: chest-db-glow 2.5s infinite ease-in-out; fill: #a855f7; }
+                    </style>
+                    <rect x="50" y="70" width="100" height="8" fill="#475569" rx="2" />
+                    <line x1="65" y1="78" x2="65" y2="105" stroke="#475569" stroke-width="4" />
+                    <line x1="135" y1="78" x2="135" y2="105" stroke="#475569" stroke-width="4" />
+                    <circle cx="100" cy="55" r="8" class="chest-db" />
+                    <circle cx="100" cy="62" r="6" fill="#cbd5e1" />
+                    <g class="db-right">
+                        <line x1="108" y1="64" x2="118" y2="60" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <line x1="113" y1="52" x2="123" y2="52" stroke="#a855f7" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="113" cy="52" r="5" fill="#334155" /> <circle cx="123" cy="52" r="5" fill="#334155" />
+                    </g>
+                    <g class="db-left">
+                        <line x1="92" y1="64" x2="82" y2="60" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <line x1="87" y1="52" x2="77" y2="52" stroke="#a855f7" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="87" cy="52" r="5" fill="#334155" /> <circle cx="77" cy="52" r="5" fill="#334155" />
+                    </g>
+                </svg>`
+            },
+            {
+                id: "dumbbell-row",
+                name: "ワンハンド・ダンベルローイング",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "dumbbell",
+                typeLabel: "ダンベル",
+                target: "背中（広背筋・大円筋・僧帽筋中部）",
+                form: "片手と片膝をベンチの上にのせ、背筋を真っ直ぐ伸ばして床と平行に保ちます。もう一方の手でダンベルを持ち、脇腹を引き上げるようにして肘を高く引き上げます。",
+                ng: "背中が丸まったり、上体を大きく回転させて反動（チーティング）で引き上げると、背中への負荷が逃げてしまいます。",
+                tip: "真上に引くのではなく、ややお尻（骨盤）の方に向かって弧を描くように後ろ気味に引くと、広背筋下部に強烈に効きます。",
+                svg: `
+                <svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1">
+                    <style>
+                        @keyframes row-arm { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(15px, -22px); } }
+                        @keyframes row-glow-p { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #a855f7; opacity: 1; } }
+                        .r-arm-anim { animation: row-arm 2.5s infinite ease-in-out; }
+                        .r-back-glow { animation: row-glow-p 2.5s infinite ease-in-out; }
+                    </style>
+                    <rect x="40" y="75" width="100" height="6" fill="#475569" rx="1" />
+                    <line x1="55" y1="81" x2="55" y2="105" stroke="#475569" stroke-width="3" />
+                    <line x1="125" y1="81" x2="125" y2="105" stroke="#475569" stroke-width="3" />
+                    <line x1="65" y1="75" x2="85" y2="75" stroke="#cbd5e1" stroke-width="3.5" stroke-linecap="round" />
+                    <line x1="85" y1="75" x2="85" y2="105" stroke="#cbd5e1" stroke-width="3" />
+                    <line x1="115" y1="45" x2="115" y2="75" stroke="#cbd5e1" stroke-width="3" />
+                    <line x1="65" y1="52" x2="115" y2="45" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" />
+                    <circle cx="122" cy="38" r="6" fill="#cbd5e1" />
+                    <path d="M75,51 Q90,43 110,46" fill="none" stroke="#a855f7" stroke-width="4" stroke-linecap="round" class="r-back-glow" />
+                    <g class="r-arm-anim">
+                        <path d="M80,49 L70,74" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <line x1="62" y1="74" x2="78" y2="74" stroke="#a855f7" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="62" cy="74" r="4" fill="#334155" /> <circle cx="78" cy="74" r="4" fill="#334155" />
+                    </g>
+                </svg>`
+            },
+            {
+                id: "side-raise",
+                name: "ダンベル・サイドレイズ",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "dumbbell",
+                typeLabel: "ダンベル",
+                target: "肩（三角筋中部） / 肩幅を広くメロン肩を作る",
+                form: "両手にダンベルを持ち、背筋を伸ばして軽く前傾姿勢をとります。肘をわずかに曲げた状態を固定したまま、手の甲を天井に向けながら両腕を真横に（肩の高さまで）引き上げます。",
+                ng: "肩をすくめて（首の僧帽筋を使って）上げたり、体を激しく上下に振る反動を使ってダンベルを放り投げるように上げるのはNGです。",
+                tip: "ダンベルを「上に持ち上げる」というより、両手を「左右に遠く押し広げる」イメージで行うと、狙った肩中部に負荷が集中します。",
+                svg: `
+                <svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1">
+                    <style>
+                        @keyframes sr-arms { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(75deg); } }
+                        @keyframes sr-arms-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-75deg); } }
+                        @keyframes deltoid-glow { 0%, 100% { fill: #475569; opacity: 0.3; } 50% { fill: #a855f7; opacity: 1; } }
+                        .sr-arm-r { animation: sr-arms 2.5s infinite ease-in-out; transform-origin: 112px 46px; }
+                        .sr-arm-l { animation: sr-arms-l 2.5s infinite ease-in-out; transform-origin: 88px 46px; }
+                        .deltoid { animation: deltoid-glow 2.5s infinite ease-in-out; }
+                    </style>
+                    <circle cx="100" cy="32" r="7" fill="#cbd5e1" />
+                    <line x1="100" y1="39" x2="100" y2="85" stroke="#cbd5e1" stroke-width="5" />
+                    <line x1="92" y1="85" x2="92" y2="110" stroke="#475569" stroke-width="3" />
+                    <line x1="108" y1="85" x2="108" y2="110" stroke="#475569" stroke-width="3" />
+                    <circle cx="88" cy="44" r="4" fill="#cbd5e1" class="deltoid" />
+                    <circle cx="112" cy="44" r="4" fill="#cbd5e1" class="deltoid" />
+                    <g class="sr-arm-r">
+                        <line x1="112" y1="46" x2="112" y2="76" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <line x1="105" y1="76" x2="119" y2="76" stroke="#a855f7" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="105" cy="76" r="3" fill="#334155" /> <circle cx="119" cy="76" r="3" fill="#334155" />
+                    </g>
+                    <g class="sr-arm-l">
+                        <line x1="88" y1="46" x2="88" y2="76" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <line x1="81" y1="76" x2="95" y2="76" stroke="#a855f7" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="81" cy="76" r="3" fill="#334155" /> <circle cx="95" cy="76" r="3" fill="#334155" />
+                    </g>
+                </svg>`
+            },
+            {
+                id: "dumbbell-curl",
+                name: "ダンベル・バイセップスカール",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "dumbbell",
+                typeLabel: "ダンベル",
+                target: "腕（上腕二頭筋） / たくましい力こぶを作る",
+                form: "胸を張って直立し、手のひらを前に向けてダンベルを握ります。肘の位置を脇腹にぴったりと固定したまま、肘を曲げてダンベルを力強く顔の高さまで巻き上げます。",
+                ng: "ダンベルを引き上げる時に肘が一緒に前へ出てしまうと、前側の肩（三角筋前部）の運動になってしまい、力こぶへの負荷が逃げてしまいます。",
+                tip: "トップポジション（一番上まで上げた時）で、手のひらを外側にさらに少しキュッとひねる（外旋）と、二頭筋が最高潮に収縮します。",
+                svg: `
+                <svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1">
+                    <style>
+                        @keyframes curl-forearm { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-100deg); } }
+                        @keyframes bicep-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #a855f7; opacity: 1; } }
+                        .c-forearm-anim { animation: curl-forearm 2.5s infinite ease-in-out; transform-origin: 96px 68px; }
+                        .bicep-glow { animation: bicep-glow 2.5s infinite ease-in-out; }
+                    </style>
+                    <circle cx="90" cy="30" r="7" fill="#cbd5e1" />
+                    <line x1="90" y1="37" x2="90" y2="85" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" />
+                    <line x1="90" y1="45" x2="96" y2="68" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                    <line x1="90" y1="45" x2="96" y2="68" stroke="#a855f7" stroke-width="4" stroke-linecap="round" class="bicep-glow" />
+                    <g class="c-forearm-anim">
+                        <line x1="96" y1="68" x2="116" y2="68" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <line x1="116" y1="60" x2="116" y2="76" stroke="#a855f7" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="116" cy="60" r="3" fill="#334155" /> <circle cx="116" cy="76" r="3" fill="#334155" />
+                    </g>
+                </svg>`
+            },
+            {
+                id: "goblet-squat",
+                name: "ダンベル・ゴブレットスクワット",
+                area: "lower",
+                areaLabel: "下半身",
+                type: "dumbbell",
+                typeLabel: "ダンベル",
+                target: "太もも（大腿四頭筋）・お尻（大臀筋）・体幹（腹圧）",
+                form: "ダンベルの片側のウェイトを両手で包み込むように胸の前で縦に持ちます（ゴブレットを持つ形）。足を肩幅より少し広めに開き、背筋を伸ばしたままお尻を深く落とします。",
+                ng: "ダンベルの重量に負けて上体が前にガクッと倒れ、背中が丸まってしまうと腰に過度な負担がかかり怪我の原因になります。",
+                tip: "体の前側で重量を支える特性上、通常のスクワットよりも上体を垂直に立てやすく、太もみの前側（大腿四頭筋）を集中的に追い込めます。",
+                svg: `
+                <svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1">
+                    <style>
+                        @keyframes gob-hip { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(22px); } }
+                        @keyframes gob-thigh { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-55deg); } }
+                        @keyframes gob-shin { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(35deg); } }
+                        @keyframes gob-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #a855f7; opacity: 1; } }
+                        .gb-body { animation: gob-hip 2.5s infinite ease-in-out; }
+                        .gb-thigh-anim { animation: gob-thigh 2.5s infinite ease-in-out; transform-origin: 90px 85px; }
+                        .gb-shin-anim { animation: gob-shin 2.5s infinite ease-in-out; transform-origin: 110px 65px; }
+                        .gb-glow { animation: gob-glow 2.5s infinite ease-in-out; }
+                    </style>
+                    <line x1="60" y1="100" x2="140" y2="100" stroke="#334155" stroke-width="3" />
+                    <g class="gb-body">
+                        <circle cx="85" cy="20" r="7" fill="#cbd5e1" />
+                        <line x1="85" y1="27" x2="90" y2="60" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" />
+                        <rect x="94" y="34" width="8" height="12" fill="#a855f7" rx="1" />
+                        <path d="M90,38 L96,38" stroke="#cbd5e1" stroke-width="2" />
+                    </g>
+                    <g class="gb-thigh-anim">
+                        <line x1="90" y1="60" x2="110" y2="65" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" />
+                        <line x1="90" y1="60" x2="110" y2="65" stroke="#a855f7" stroke-width="5" stroke-linecap="round" class="gb-glow" />
+                        <g class="gb-shin-anim">
+                            <line x1="110" y1="65" x2="110" y2="100" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        </g>
+                    </g>
+                </svg>`
+            },
+            {
+                id: "french-press",
+                name: "ダンベル・フレンチプレス",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "dumbbell",
+                typeLabel: "ダンベル",
+                target: "二の腕（上腕三頭筋） / 腕のたるみを引き締める",
+                form: "ベンチに座り（または直立し）、両手でダンベルの片側のウェイトを包み込むように持って頭の後ろに構えます。肘の位置を耳の横に固定したまま、手のひらを天井に向かって突き上げるように腕を真っ直ぐ伸ばします。",
+                ng: "動作中に肘が外側に大きく開いたり、前後にグラグラ動いてしまうと、肩関節を痛めたり二の腕への負荷が逃げてしまいます。",
+                tip: "ダンベルを頭の後ろへゆっくり深く下ろしたときに、二の腕の後ろ側がしっかりストレッチ（伸長）されているのを意識すると効果が絶大です。",
+                svg: `
+                <svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1">
+                    <style>
+                        @keyframes french-extend { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(95deg); } }
+                        @keyframes tricep-glow { 0%, 100% { stroke: #a855f7; opacity: 1; } 50% { stroke: #475569; opacity: 0.3; } }
+                        .fr-forearm-anim { animation: french-extend 2.5s infinite ease-in-out; transform-origin: 105px 22px; }
+                        .tricep-glow { animation: tricep-glow 2.5s infinite ease-in-out; }
+                    </style>
+                    <line x1="60" y1="105" x2="140" y2="105" stroke="#334155" stroke-width="3" />
+                    <rect x="85" y="75" width="22" height="6" fill="#475569" />
+                    <rect x="83" y="55" width="4" height="25" fill="#475569" />
+                    <circle cx="100" cy="38" r="7" fill="#cbd5e1" />
+                    <line x1="98" y1="45" x2="96" y2="76" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" />
+                    <line x1="98" y1="45" x2="105" y2="22" stroke="#cbd5e1" stroke-width="3.5" stroke-linecap="round" />
+                    <line x1="98" y1="45" x2="105" y2="22" stroke="#a855f7" stroke-width="4.5" stroke-linecap="round" class="tricep-glow" />
+                    <g class="fr-forearm-anim">
+                        <line x1="105" y1="22" x2="105" y2="50" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <line x1="97" y1="50" x2="113" y2="50" stroke="#a855f7" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="97" cy="50" r="5" fill="#334155" /> <circle cx="113" cy="50" r="5" fill="#334155" />
+                    </g>
+                </svg>`
+            },
+
+            // --- マシン種目 ---
+            {
+                id: "lat-pulldown",
+                name: "ラットプルダウン",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "背中（広背筋・大円筋・僧帽筋）",
+                form: "バーを肩幅よりやや広く握り、腿パッドを固定。胸をしっかりと張り、少し上体を後ろに倒しながら、バーを鎖骨に向けて引き下ろします。肘を脇腹に近づけるイメージで背中を収縮させます。",
+                ng: "背中が丸まった状態で引いたり、腕の力だけでバーを引いてしまうと、背中への負荷が逃げて肩を痛める原因になります。",
+                tip: "戻す時（ネガティブ動作）もウェイトの重さに抗いながら、3秒ほどかけてゆっくりと腕を伸ばしていくと効果が倍増します。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes pull-bar { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(24px); } } @keyframes arm-u { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(35deg); } } @keyframes arm-f { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-70deg); } } @keyframes target-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #ff9f43; opacity: 1; } } .bar-anim { animation: pull-bar 2.5s infinite ease-in-out; } .arm-u-anim { animation: arm-u 2.5s infinite ease-in-out; transform-origin: 90px 45px; } .arm-f-anim { animation: arm-f 2.5s infinite ease-in-out; transform-origin: 90px 75px; } .back-glow { animation: target-glow 2.5s infinite ease-in-out; }</style><line x1="110" y1="10" x2="110" y2="110" stroke="#334155" stroke-width="3" /><line x1="80" y1="15" x2="140" y2="15" stroke="#334155" stroke-width="3" /><rect x="75" y="80" width="30" height="6" fill="#475569" rx="2" /><circle cx="100" cy="65" r="5" fill="#475569" /><line x1="110" y1="15" x2="65" y2="15" stroke="#475569" stroke-width="1.5" /><line x1="65" y1="15" x2="65" y2="50" stroke="#475569" stroke-width="1.5" /><rect x="58" y="50" width="14" height="20" fill="#334155" class="bar-anim" /><circle cx="95" cy="30" r="7" fill="#cbd5e1" /><line x1="95" y1="37" x2="90" y2="80" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><path d="M90,45 Q78,55 83,75" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" class="back-glow" /><g class="arm-u-anim"><line x1="90" y1="45" x2="90" y2="75" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><g class="arm-f-anim"><line x1="90" y1="75" x2="115" y2="60" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /></g></g><g class="bar-anim"><line x1="90" y1="15" x2="115" y2="60" stroke="#ff9f43" stroke-width="1" stroke-dasharray="2 2" /><line x1="100" y1="60" x2="135" y2="55" stroke="#ff9f43" stroke-width="4" stroke-linecap="round" /></g></svg>`
+            },
+            {
+                id: "chest-press",
+                name: "チェストプレス",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "胸（大胸筋全体）・二の腕（上腕三頭筋）",
+                form: "シートに深く腰掛け、グリップが胸の高さ（乳頭ライン）にくるよう調整。肩甲骨を寄せて落とし、胸を張った姿勢をキープしたまま、バーを前方へ押し出します。",
+                ng: "押し出す際に肩が前に出たりすくんでしまうと、大胸筋ではなく肩の前部に負荷が逃げて関節を痛めます。",
+                tip: "グリップを強く握りすぎず、手のひらの付け根（底）で押し出す感覚を持つと、胸を意識しやすくなります。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes press-sh { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-30deg); } } @keyframes press-el { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(50deg); } } @keyframes chest-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #06b6d4; opacity: 1; } } @keyframes machine-arm { 0%, 100% { transform: translateX(0px); } 50% { transform: translateX(20px); } } .arm-sh-anim { animation: press-sh 2.5s infinite ease-in-out; transform-origin: 90px 48px; } .arm-el-anim { animation: press-el 2.5s infinite ease-in-out; transform-origin: 105px 70px; } .chest-glow { animation: chest-glow 2.5s infinite ease-in-out; } .m-arm-anim { animation: machine-arm 2.5s infinite ease-in-out; }</style><line x1="75" y1="20" x2="75" y2="100" stroke="#334155" stroke-width="4"/><rect x="71" y="45" width="23" height="4" fill="#475569" transform="rotate(-75 71 45)" /><rect x="75" y="80" width="22" height="6" fill="#475569" /><circle cx="82" cy="30" r="7" fill="#cbd5e1" /><line x1="84" y1="37" x2="89" y2="80" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="86" y1="45" x2="98" y2="52" stroke="#475569" stroke-width="5" stroke-linecap="round" class="chest-glow" /><g class="m-arm-anim"><line x1="120" y1="20" x2="120" y2="90" stroke="#475569" stroke-width="3" /><circle cx="120" cy="65" r="4" fill="#06b6d4" /></g><g class="arm-sh-anim"><line x1="90" y1="48" x2="105" y2="70" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><g class="arm-el-anim"><line x1="105" y1="70" x2="120" y2="65" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /></g></g></svg>`
+            },
+            {
+                id: "leg-press",
+                name: "レッグプレス",
+                area: "lower",
+                areaLabel: "下半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "太もも（大腿四頭筋・ハムストリングス）・お尻（大臀筋）",
+                form: "シートに深く座りお尻を固定します。フットプレートに足を肩幅程度に開き、膝が90度になる位置にセット。グリップを握り体を固定し、プレートをしっかり押し出します。",
+                ng: "プレートを押し切った時に【膝をピンと伸ばしきらない】こと。重みで膝が逆方向に折れる大怪我に繋がります。",
+                tip: "足裏全体で押すのが基本ですが、特にお尻〜裏ももを狙う場合は、足をプレートの上部に置き、踵（かかと）重心で押すと効果的です。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes plate-push { 0%, 100% { transform: translate(0px, 0px); } 50% { transform: translate(25px, -25px); } } @keyframes knee-bend { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-55deg); } } @keyframes hip-angle { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(20deg); } } @keyframes quad-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #ff9f43; opacity: 1; } } .plate-anim { animation: plate-push 2.5s infinite ease-in-out; } .hip-anim { animation: hip-angle 2.5s infinite ease-in-out; transform-origin: 75px 82px; } .knee-anim { animation: knee-bend 2.5s infinite ease-in-out; transform-origin: 100px 65px; } .quad-glow { animation: quad-glow 2.5s infinite ease-in-out; }</style><line x1="100" y1="90" x2="180" y2="10" stroke="#334155" stroke-width="4" stroke-dasharray="4 4" /><rect x="50" y="55" width="28" height="6" fill="#475569" transform="rotate(35 50 55)" /><rect x="68" y="80" width="25" height="6" fill="#475569" /><circle cx="58" cy="40" r="7" fill="#cbd5e1" /><g class="hip-anim"><line x1="75" y1="82" x2="100" y2="65" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="75" y1="82" x2="100" y2="65" stroke="#ff9f43" stroke-width="5" stroke-linecap="round" class="quad-glow" /><g class="knee-anim"><line x1="100" y1="65" x2="125" y2="80" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /></g></g><g class="plate-anim"><line x1="120" y1="60" x2="145" y2="85" stroke="#475569" stroke-width="4" stroke-linecap="round" /><rect x="135" y="45" width="10" height="20" fill="#334155" transform="rotate(45 135 45)" /></g></svg>`
+            },
+            {
+                id: "leg-extension",
+                name: "レッグエクステンション",
+                area: "lower",
+                areaLabel: "下半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "太もめの前（大腿四頭筋）",
+                form: "マシンの回転軸と自分の膝の関節が一直線になるようシートを調整。足首の少し上にパッドを当て、グリップを強く握ってお尻をシートに固定し、膝を上に向けてしっかりと伸ばしきります。",
+                ng: "上体が前かがみになったり、お尻が浮いた状態で蹴り上げると、太も目の付け根の筋肉にしっかりと負荷が入りません。",
+                tip: "トップポジション（膝を伸ばしきった位置）で一瞬静止させ、太ももを硬く収縮させることで高い効果を得られます。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes ext-knee { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(65deg); } } @keyframes quad-flash { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #ff9f43; opacity: 1; } } .ext-knee-anim { animation: ext-knee 2.5s infinite ease-in-out; transform-origin: 105px 75px; } .quad-flash { animation: quad-flash 2.5s infinite ease-in-out; }</style><line x1="75" y1="20" x2="75" y2="100" stroke="#334155" stroke-width="4" /><rect x="75" y="70" width="30" height="6" fill="#475569" /><rect x="68" y="35" width="25" height="5" fill="#475569" transform="rotate(80 68 35)" /><circle cx="78" cy="22" r="7" fill="#cbd5e1" /><line x1="79" y1="29" x2="84" y2="72" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="84" y1="72" x2="105" y2="75" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="84" y1="72" x2="105" y2="75" stroke="#ff9f43" stroke-width="5" stroke-linecap="round" class="quad-flash" /><g class="ext-knee-anim"><line x1="105" y1="75" x2="105" y2="105" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><circle cx="105" cy="100" r="5" fill="#ff9f43" /><line x1="105" y1="75" x2="120" y2="95" stroke="#475569" stroke-width="2" /><circle cx="120" cy="95" r="4" fill="#334155" /></g></svg>`
+            },
+            {
+                id: "leg-curl",
+                name: "シーテッド・レッグカール",
+                area: "lower",
+                areaLabel: "下半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "太もめの裏（ハムストリングス）",
+                form: "シートに深く座り、膝の少し上をパッドで固定。ふくらはぎの下部にロールを当て、膝を曲げられる限界まで深く後ろに引き込み、ゆっくり戻します。",
+                ng: "動作中に腰やお尻が浮いてしまうと、ハムストリングスへの負荷が逃げてしまいます。",
+                tip: "つま先を上（足首を直角）に向けて動作を行うと、ふくらはぎの関与を減らし、もも裏を集中的に刺激できます。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes curl-knee { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-55deg); } } @keyframes ham-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #a855f7; opacity: 1; } } .curl-knee-anim { animation: curl-knee 2.5s infinite ease-in-out; transform-origin: 105px 75px; } .ham-glow { animation: ham-glow 2.5s infinite ease-in-out; }</style><line x1="75" y1="20" x2="75" y2="100" stroke="#334155" stroke-width="4" /><rect x="75" y="70" width="30" height="6" fill="#475569" /><rect x="68" y="35" width="25" height="5" fill="#475569" transform="rotate(80 68 35)" /><circle cx="78" cy="22" r="7" fill="#cbd5e1" /><line x1="79" y1="29" x2="84" y2="72" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="84" y1="72" x2="105" y2="75" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><path d="M84,74 Q94,80 104,76" fill="none" stroke="#a855f7" stroke-width="4" stroke-linecap="round" class="ham-glow" /><g class="curl-knee-anim"><line x1="105" y1="75" x2="115" y2="105" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><circle cx="115" cy="103" r="5" fill="#a855f7" /><line x1="105" y1="75" x2="125" y2="90" stroke="#475569" stroke-width="2" /></g></svg>`
+            },
+            {
+                id: "shoulder-press",
+                name: "ショルダープレス (マシン)",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "肩（三角筋前部・中部）",
+                form: "グリップが耳の高さにくるようシートを設定。背もたれに背中を当て、胸を張り、グリップを握ってバーを天井に向かって真っ直ぐ垂直に押し上げます。",
+                ng: "腰を過剰に反らせて押すと、重さが腰にかかり痛める原因になります。また、肘を外に開きすぎると肩関節に負担がかかります。",
+                tip: "下ろす位置は耳の横あたりまで。これ以上深く下ろすと肩関節の負担が強くなるため、可動域は無理のない範囲に留めます。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes sh-press-arm { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-24px); } } @keyframes shoulder-flash { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #ff9f43; opacity: 1; } } .sh-press-anim { animation: sh-press-arm 2.5s infinite ease-in-out; } .shoulder-flash { animation: shoulder-flash 2.5s infinite ease-in-out; }</style><line x1="90" y1="30" x2="90" y2="110" stroke="#334155" stroke-width="4" /><rect x="88" y="55" width="4" height="40" fill="#475569" /><rect x="90" y="90" width="20" height="6" fill="#475569" /><circle cx="104" cy="45" r="7" fill="#cbd5e1" /><line x1="104" y1="52" x2="102" y2="92" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><circle cx="104" cy="55" r="4" fill="#ff9f43" class="shoulder-flash" /><g class="sh-press-anim"><path d="M104,55 Q120,65 125,50" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><rect x="120" y="44" width="8" height="8" fill="#ff9f43" rx="2" /><line x1="80" y1="80" x2="124" y2="48" stroke="#475569" stroke-width="2" /></g></svg>`
+            },
+            {
+                id: "seated-row",
+                name: "シーテッドロー / ローイング",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "背中の中央・厚み（広背筋・僧帽筋中部）",
+                form: "胸当てパッドに胸を密着させ、腕を伸ばしてグリップを握ります。みぞおちに向かって、肘を後ろへ強く引くようにしてグリップを手前に引き寄せ、背中を収縮させます。",
+                ng: "肩をすくめて引いたり、胸がパッドから離れて体が後ろに倒れすぎると、背中の筋肉を十分に動かせません。",
+                tip: "「手で引く」のではなく「肘で後ろの人にエルボーを食らわせる」イメージで動かすと、背中をしっかり使えます。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes pull-row { 0%, 100% { transform: translateX(0px); } 50% { transform: translateX(-20px); } } @keyframes row-upper-arm { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-45deg); } } @keyframes row-fore-arm { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(60deg); } } @keyframes row-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #06b6d4; opacity: 1; } } .row-handle-anim { animation: pull-row 2.5s infinite ease-in-out; } .row-u-anim { animation: row-upper-arm 2.5s infinite ease-in-out; transform-origin: 90px 48px; } .row-f-anim { animation: row-fore-arm 2.5s infinite ease-in-out; transform-origin: 90px 73px; } .row-glow { animation: row-glow 2.5s infinite ease-in-out; }</style><line x1="120" y1="40" x2="120" y2="100" stroke="#334155" stroke-width="4" /><circle cx="120" cy="55" r="4" fill="#475569" /><rect x="75" y="85" width="25" height="5" fill="#475569" /><circle cx="86" cy="30" r="7" fill="#cbd5e1" /><line x1="88" y1="37" x2="88" y2="85" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><path d="M85,42 Q78,55 85,70" fill="none" stroke="#06b6d4" stroke-width="4" class="row-glow" /><g class="row-handle-anim"><line x1="140" y1="58" x2="115" y2="58" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="2 2" /><line x1="115" y1="50" x2="115" y2="66" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" /></g><g class="row-u-anim"><line x1="90" y1="48" x2="90" y2="73" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><g class="row-f-anim"><line x1="90" y1="73" x2="115" y2="58" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /></g></g></svg>`
+            },
+            {
+                id: "cable-crossover",
+                name: "ケーブルクロスオーバー",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "胸（大胸筋の内側・下部）",
+                form: "ケーブルマシンの両側に立ち、アタッチメントを握ります。上体を少し前傾させ、腕を大きな木に抱きつくように、弧を描きながら体の前で両手を絞り込みます。",
+                ng: "肘を完全に真っ直ぐ伸ばした状態で行うと、二頭筋や肩に負担がかかり、大胸筋に入りません。肘は常に軽く曲げます。",
+                tip: "両手が最も近づいたタイミングで、胸の筋肉をグッと中央に寄せて「搾り出す」ように収縮を意識します。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes cable-hug { 0%, 100% { transform: scaleX(1) scaleY(1); } 50% { transform: scaleX(0.5) scaleY(1.1); } } @keyframes chest-inner { 0%, 100% { r: 1px; opacity: 0; } 50% { r: 6px; opacity: 1; } } .cable-hug-anim { animation: cable-hug 2.5s infinite ease-in-out; transform-origin: 100px 50px; } .chest-inner-anim { animation: chest-inner 2.5s infinite ease-in-out; }</style><line x1="40" y1="20" x2="40" y2="100" stroke="#334155" stroke-width="4"/><line x1="160" y1="20" x2="160" y2="100" stroke="#334155" stroke-width="4"/><circle cx="40" cy="35" r="5" fill="#475569" /><circle cx="160" cy="35" r="5" fill="#475569" /><circle cx="100" cy="35" r="7" fill="#cbd5e1" /><line x1="100" y1="42" x2="100" y2="90" stroke="#cbd5e1" stroke-width="4" /><line x1="85" y1="90" x2="115" y2="90" stroke="#475569" stroke-width="3" /><circle cx="100" cy="50" r="5" fill="#06b6d4" class="chest-inner-anim" /><g class="cable-hug-anim"><path d="M100,45 Q75,55 60,70" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><path d="M100,45 Q125,55 140,70" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><line x1="40" y1="35" x2="60" y2="70" stroke="#06b6d4" stroke-width="1.2" stroke-dasharray="2 2" /><line x1="160" y1="35" x2="140" y2="70" stroke="#06b6d4" stroke-width="1.2" stroke-dasharray="2 2" /></g></svg>`
+            },
+            {
+                id: "abdominal-machine",
+                name: "アブドミナル (腹筋マシン)",
+                area: "core",
+                areaLabel: "体幹",
+                type: "machine",
+                typeLabel: "マシン",
+                target: "お腹（腹直筋）",
+                form: "シートに座り、バーやストラップを握ります。おへそを覗き込むように、背中全体を丸めながら上体を斜め下に向かって丸め込み、腹筋を収縮させます。",
+                ng: "腕の力で引っ張って上体を倒したり、股関節から腰を曲げるだけ（背中が真っ直ぐな状態）になると腹筋に効きません。",
+                tip: "息をふーっと限界まで吐ききりながら丸め込むと、腹直筋を限界まで最大収縮させることができます。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes abs-crunch { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(25deg); } } @keyframes abs-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #ff9f43; opacity: 1; } } .abs-spine-anim { animation: abs-crunch 2.5s infinite ease-in-out; transform-origin: 90px 85px; } .abs-glow { animation: abs-glow 2.5s infinite ease-in-out; }</style><line x1="80" y1="40" x2="80" y2="100" stroke="#334155" stroke-width="4" /><rect x="80" y="85" width="25" height="6" fill="#475569" /><g class="abs-spine-anim"><circle cx="95" cy="40" r="7" fill="#cbd5e1" /><line x1="94" y1="47" x2="90" y2="85" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><path d="M96,49 Q106,66 94,80" fill="none" stroke="#ff9f43" stroke-width="4" stroke-linecap="round" class="abs-glow" /><path d="M94,52 L110,48 L115,55" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><circle cx="115" cy="55" r="4" fill="#ff9f43" /></g></svg>`
+            },
+
+            // --- 有酸素系 ---
+            {
+                id: "treadmill",
+                name: "トレッドミル (ランニングマシン)",
+                area: "cardio",
+                areaLabel: "有酸素",
+                type: "body",
+                typeLabel: "有酸素",
+                target: "心肺機能向上・脂肪燃焼・全身持久力",
+                form: "コンソールで速度と傾斜を設定します。目線は真っ直ぐ前を向き、背筋を伸ばして、腕を後ろにしっかり振ってリズミカルに走ります（歩きます）。",
+                ng: "手すりをずっと掴んだまま歩いたり、猫背になって下を向いたまま走ると、消費カロリーが減り姿勢悪化を招きます。",
+                tip: "傾斜を「1%〜2%」つけると、外のロードを走る時と同等の空気抵抗を再現でき、膝への負担も軽減されます。脂肪燃焼には20分以上が目安です。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes t-belt { 0% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 20; } } @keyframes t-run-r { 0%, 100% { transform: rotate(15deg); } 50% { transform: rotate(-45deg); } } @keyframes t-run-l { 0%, 100% { transform: rotate(-45deg); } 50% { transform: rotate(15deg); } } .t-belt-anim { animation: t-belt 1s infinite linear; } .leg-r-anim { animation: t-run-r 0.8s infinite ease-in-out; transform-origin: 95px 75px; } .leg-l-anim { animation: t-run-l 0.8s infinite ease-in-out; transform-origin: 95px 75px; }</style><line x1="140" y1="40" x2="140" y2="90" stroke="#334155" stroke-width="4" /><rect x="130" y="32" width="18" height="8" fill="#475569" transform="rotate(-15 130 32)" /><rect x="45" y="88" width="110" height="8" fill="#475569" rx="4" /><line x1="50" y1="92" x2="150" y2="92" stroke="#ff9f43" stroke-width="2" stroke-dasharray="5 5" class="t-belt-anim" /><circle cx="100" cy="35" r="7" fill="#cbd5e1" /><line x1="100" y1="42" x2="95" y2="75" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><g class="leg-r-anim"><line x1="95" y1="75" x2="85" y2="95" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /></g><g class="leg-l-anim"><line x1="95" y1="75" x2="105" y2="95" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" style="opacity:0.7;" /></g></svg>`
+            },
+            {
+                id: "spin-bike",
+                name: "フィットネスバイク",
+                area: "cardio",
+                areaLabel: "有酸素",
+                type: "machine",
+                typeLabel: "有酸素",
+                target: "下半身（大腿四頭筋・大臀筋）・心肺機能向上",
+                form: "サドルの高さは、ペダルが一番下に来た時に「膝がわずかに曲がる程度」に設定。骨盤を立てて座り、足裏の土踏まずではなくつま先寄りの母指球でペダルを押すように回します。",
+                ng: "サドルが低すぎて膝が外側に開いて漕ぐ状態になると、膝の関節に強い負担がかかり痛みの原因になります。",
+                tip: "負荷（ペダルの重さ）を軽めにして、1分間に80〜90回転程度のハイピッチで回すと、脚が太くならず効率よく脂肪燃焼できます。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes bike-wheel { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } @keyframes bike-pedal { 0%, 100% { transform: translateY(0px) translateX(0px); } 50% { transform: translateY(20px) translateX(-5px); } } .wheel-anim { animation: bike-wheel 1.5s infinite linear; transform-origin: 135px 80px; } .crank-anim { animation: bike-wheel 1.5s infinite linear; transform-origin: 90px 80px; }</style><path d="M60,85 L90,80 L125,45 L135,80 Z" fill="none" stroke="#334155" stroke-width="4" /><line x1="90" y1="80" x2="75" y2="50" stroke="#334155" stroke-width="4" /><rect x="68" y="46" width="14" height="4" fill="#475569" /><line x1="125" y1="45" x2="120" y2="35" stroke="#334155" stroke-width="4" /><path d="M115,35 L125,35 L125,42" fill="none" stroke="#475569" stroke-width="3" /><circle cx="135" cy="80" r="18" fill="none" stroke="#475569" stroke-width="3" /><line x1="135" y1="80" x2="153" y2="80" stroke="#ff9f43" stroke-width="1.5" class="wheel-anim" /><circle cx="85" cy="28" r="7" fill="#cbd5e1" /><line x1="83" y1="35" x2="78" y2="53" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><g class="crank-anim"><line x1="90" y1="80" x2="105" y2="92" stroke="#ff9f43" stroke-width="2.5" /><circle cx="105" cy="92" r="3" fill="#cbd5e1" /></g><g class="crank-anim"><line x1="78" y1="53" x2="95" y2="70" stroke="#cbd5e1" stroke-width="3" /><line x1="95" y1="70" x2="105" y2="92" stroke="#cbd5e1" stroke-width="3" /></g></svg>`
+            },
+
+            // --- 自重トレーニング ---
+            {
+                id: "squat",
+                name: "ノーマルスクワット",
+                area: "lower",
+                areaLabel: "下半身",
+                type: "body",
+                typeLabel: "自重",
+                target: "太もも前（大腿四頭筋）・お尻（大臀筋）",
+                form: "足を肩幅に開き、つま先はやや外側に向ける。お尻を後ろに引くように、太ももが床と平行になるまで膝を曲げて落とす。",
+                ng: "膝が内側に入ってしまう、または膝がつま先よりも前に出すぎると関節を痛める原因になります。",
+                tip: "しゃがむときはお腹に力を入れ、背筋が丸まらないように真っ直ぐ保つと腰への負担が減ります。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes sq-hip { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(22px); } } @keyframes sq-thigh { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-55deg); } } @keyframes sq-shin { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(35deg); } } @keyframes sq-glow { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #ff9f43; opacity: 1; } } .sq-body { animation: sq-hip 2.5s infinite ease-in-out; } .sq-thigh-anim { animation: sq-thigh 2.5s infinite ease-in-out; transform-origin: 90px 85px; } .sq-shin-anim { animation: sq-shin 2.5s infinite ease-in-out; transform-origin: 110px 65px; } .sq-glow { animation: sq-glow 2.5s infinite ease-in-out; }</style><line x1="60" y1="100" x2="140" y2="100" stroke="#334155" stroke-width="3" /><g class="sq-body"><circle cx="85" cy="20" r="7" fill="#cbd5e1" /><line x1="85" y1="27" x2="90" y2="60" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /></g><g class="sq-thigh-anim"><line x1="90" y1="60" x2="110" y2="65" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="90" y1="60" x2="110" y2="65" stroke="#ff9f43" stroke-width="5" stroke-linecap="round" class="sq-glow" /><g class="sq-shin-anim"><line x1="110" y1="65" x2="110" y2="100" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /></g></g></svg>`
+            },
+            {
+                id: "pushup",
+                name: "プッシュアップ (腕立て)",
+                area: "upper",
+                areaLabel: "上半身",
+                type: "body",
+                typeLabel: "自重",
+                target: "胸（大胸筋）・二の腕（上腕三頭筋）・肩の前部",
+                form: "手幅は肩幅より拳2個分広く。頭から足首まで一直線をキープしたまま、胸が床につく直前まで体を下ろす。",
+                ng: "お尻が上がったり、逆に腰が反って沈んでしまうと、胸への負荷が逃げて腰痛の原因になります。",
+                tip: "手の平の外側（小指側）に重心を意識して押すと、胸外側への収縮実感が強くなります。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes pu-body { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } } @keyframes pu-chest { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #06b6d4; opacity: 1; } } .pu-body-anim { animation: pu-body 2.5s infinite ease-in-out; transform-origin: 60px 85px; } .pu-chest { animation: pu-chest 2.5s infinite ease-in-out; }</style><line x1="50" y1="90" x2="160" y2="90" stroke="#334155" stroke-width="3" /><g class="pu-body-anim"><circle cx="145" cy="50" r="7" fill="#cbd5e1" /><line x1="140" y1="54" x2="60" y2="85" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="120" y1="62" x2="135" y2="56" stroke="#06b6d4" stroke-width="5" stroke-linecap="round" class="pu-chest" /><path d="M125,60 L125,90" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /></g></svg>`
+            },
+            {
+                id: "crunch",
+                name: "クランチ (腹筋)",
+                area: "core",
+                areaLabel: "体幹",
+                type: "body",
+                typeLabel: "自重",
+                target: "お腹の上部（腹直筋上部）",
+                form: "仰向けで膝を90度に曲げる。おへそを覗き込むように、背中を「丸めながら」上体を起こす。腰は床につけたままにする。",
+                ng: "手で頭を強く引っ張り上げて首を痛めたり、反動を使って背中を真っ直ぐのまま起こそうとするのはNG。",
+                tip: "起こした位置で息を全て吐ききると、腹直筋が限界まで収縮して負荷が高まります。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes cr-neck { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-25deg); } } @keyframes cr-abs { 0%, 100% { stroke: #475569; opacity: 0.3; } 50% { stroke: #ff9f43; opacity: 1; } } .cr-neck-anim { animation: cr-neck 2.5s infinite ease-in-out; transform-origin: 90px 85px; } .cr-abs { animation: cr-abs 2.5s infinite ease-in-out; }</style><line x1="50" y1="90" x2="160" y2="90" stroke="#334155" stroke-width="3" /><line x1="90" y1="85" x2="120" y2="60" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><line x1="120" y1="60" x2="140" y2="90" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" /><g class="cr-neck-anim"><circle cx="70" cy="65" r="7" fill="#cbd5e1" /><line x1="74" y1="70" x2="90" y2="85" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><path d="M78,74 Q88,68 91,83" fill="none" stroke="#ff9f43" stroke-width="4" class="cr-abs" /></g></svg>`
+            },
+            {
+                id: "plank",
+                name: "プランク",
+                area: "core",
+                areaLabel: "体幹",
+                type: "body",
+                typeLabel: "自重",
+                target: "腹横筋・インナーマッスル・体幹全体",
+                form: "肘を肩の真下につき、前腕とつま先で体を支える。首の骨から足首までが一直線になるように意識し、お腹を凹ませてキープする。",
+                ng: "疲れてくるとお尻が高く上がったり、逆に腰が大きく反って沈んでしまいます。腰痛の原因になるので注意。",
+                tip: "お尻の穴をキュッと閉め、下腹部を背骨に引き寄せるように凹ませると、インナーマッスルに強烈に効きます。",
+                svg: `<svg viewBox="0 0 200 120" class="w-full h-36 bg-[#161616] rounded-xl border border-[#2d2d2d] my-1"><style>@keyframes pl-vibe { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(1.5px); } } @keyframes pl-core-glow { 0%, 100% { stroke: #ff9f43; opacity: 0.5; } 50% { stroke: #ff9f43; opacity: 1; } } .pl-vibe-anim { animation: pl-vibe 0.15s infinite ease-in-out; } .pl-core-glow { animation: pl-core-glow 1s infinite ease-in-out; }</style><line x1="40" y1="90" x2="160" y2="90" stroke="#334155" stroke-width="3" /><g class="pl-vibe-anim"><circle cx="140" cy="58" r="7" fill="#cbd5e1" /><line x1="135" y1="62" x2="60" y2="82" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round" /><line x1="90" y1="74" x2="115" y2="67" stroke="#ff9f43" stroke-width="5" stroke-linecap="round" class="pl-core-glow" /><path d="M125,65 L125,90 L140,90" fill="none" stroke="#cbd5e1" stroke-width="3.5" stroke-linecap="round" /></g></svg>`
+            }
+        ];
+
+        // ==========================================
+        // 状態管理（フィルターと検索状態）
+        // ==========================================
+        let currentAreaFilter = 'all';
+        let currentTypeFilter = 'all';
+        let currentSearchQuery = '';
+
+        // ==========================================
+        // UI制御 ＆ レンダリングロジック
+        // ==========================================
+
+        // アコーディオンのトグル
+        function toggleDetail(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            
+            if (detail.classList.contains('open')) {
+                detail.classList.remove('open');
+                detail.style.paddingTop = '0px';
+                detail.style.paddingBottom = '0px';
+                icon.style.transform = 'rotate(0deg)';
+                setTimeout(() => { detail.classList.add('hidden'); }, 300);
+            } else {
+                detail.classList.remove('hidden');
+                setTimeout(() => {
+                    detail.classList.add('open');
+                    detail.style.paddingTop = '16px';
+                    detail.style.paddingBottom = '16px';
+                    icon.style.transform = 'rotate(180deg)';
+                }, 10);
+            }
+        }
+
+        // 部位フィルター切り替え
+        function setAreaFilter(category) {
+            currentAreaFilter = category;
+            
+            const areaKeys = ['all', 'upper', 'lower', 'core', 'cardio'];
+            areaKeys.forEach(k => {
+                const el = document.getElementById(`area-${k}`);
+                if (k === category) {
+                    el.classList.add('bg-[#ff9f43]', 'text-[#121212]');
+                    el.classList.remove('text-gray-400');
+                } else {
+                    el.classList.remove('bg-[#ff9f43]', 'text-[#121212]');
+                    el.classList.add('text-gray-400');
+                }
+            });
+
+            renderWorkouts();
+        }
+
+        // 器具タイプフィルター切り替え
+        function setTypeFilter(type) {
+            currentTypeFilter = type;
+
+            const typeKeys = ['all', 'machine', 'dumbbell', 'body'];
+            typeKeys.forEach(k => {
+                const el = document.getElementById(`type-${k}`);
+                if (k === type) {
+                    el.classList.add('bg-[#2d2d2d]', 'text-[#ff9f43]');
+                    el.classList.remove('text-gray-400');
+                } else {
+                    el.classList.remove('bg-[#2d2d2d]', 'text-[#ff9f43]');
+                    el.classList.add('text-gray-400');
+                }
+            });
+
+            renderWorkouts();
+        }
+
+        // 検索入力の監視
+        function handleSearch() {
+            const input = document.getElementById('search-input');
+            currentSearchQuery = input.value.trim().toLowerCase();
+            renderWorkouts();
+        }
+
+        // 画面へのレンダリング
+        function renderWorkouts() {
+            const container = document.getElementById('workout-list');
+            const noResultsEl = document.getElementById('no-results');
+            const countEl = document.getElementById('result-count');
+            const statusEl = document.getElementById('filter-status');
+
+            // データフィルタリング
+            const filteredData = workoutData.filter(item => {
+                const matchArea = currentAreaFilter === 'all' || item.area === currentAreaFilter;
+                const matchType = currentTypeFilter === 'all' || item.type === currentTypeFilter;
+                const matchSearch = currentSearchQuery === '' || 
+                                    item.name.toLowerCase().includes(currentSearchQuery) ||
+                                    item.target.toLowerCase().includes(currentSearchQuery) ||
+                                    item.form.toLowerCase().includes(currentSearchQuery);
+
+                return matchArea && matchType && matchSearch;
+            });
+
+            // HTML生成
+            if (filteredData.length === 0) {
+                container.innerHTML = '';
+                noResultsEl.classList.remove('hidden');
+            } else {
+                noResultsEl.classList.add('hidden');
+                
+                const cardsHtml = filteredData.map(item => {
+                    let typeBadgeColor = 'text-green-400 bg-[#1b2b22]'; // 自重（緑）
+                    if (item.type === 'machine') {
+                        typeBadgeColor = 'text-cyan-400 bg-[#162730]'; // マシン（水色）
+                    } else if (item.type === 'dumbbell') {
+                        typeBadgeColor = 'text-purple-400 bg-[#251b30]'; // ダンベル（紫）
+                    } else if (item.area === 'cardio') {
+                        typeBadgeColor = 'text-pink-400 bg-[#301625]'; // 有酸素（ピンク）
+                    }
+
+                    return `
+                        <div class="workout-card bg-[#1e1e1e] border border-[#2d2d2d] rounded-xl overflow-hidden shadow-lg transition-all hover:border-[#3d3d3d]">
+                            <div class="p-4 flex justify-between items-center cursor-pointer select-none" onclick="toggleDetail('${item.id}')">
+                                <div>
+                                    <span class="text-[10px] bg-[#2d2d2d] text-[#ff9f43] px-2 py-0.5 rounded font-bold mr-1">${item.areaLabel}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded font-bold mr-2 ${typeBadgeColor}">${item.typeLabel}</span>
+                                    <h2 class="text-sm font-bold inline-block mt-1 text-white">${item.name}</h2>
+                                </div>
+                                <i id="icon-${item.id}" class="fa-solid fa-chevron-down text-gray-500 transition-transform duration-300"></i>
+                            </div>
+                            <div id="detail-${item.id}" class="accordion-content hidden border-t border-[#2d2d2d] bg-[#161616] px-4 text-sm space-y-4">
+                                <div class="mt-2">
+                                    <span class="text-[11px] font-bold text-gray-500 tracking-wider flex items-center gap-1"><i class="fa-solid fa-play"></i> ACTION PREVIEW / 動作アニメーション</span>
+                                    ${item.svg}
+                                </div>
+                                
+                                <div class="pt-2">
+                                    <span class="text-[#ff9f43] font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> 正しいフォーム</span>
+                                    <p class="text-gray-300 mt-1 pl-4 border-l-2 border-[#ff9f43]/40 leading-relaxed">${item.form}</p>
+                                </div>
+                                <div>
+                                    <span class="text-[#ff6b6b] font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-xmark"></i> NGポイント</span>
+                                    <p class="text-gray-300 mt-1 pl-4 border-l-2 border-[#ff6b6b]/40 leading-relaxed">${item.ng}</p>
+                                </div>
+                                <div>
+                                    <span class="text-cyan-400 font-bold flex items-center gap-1.5"><i class="fa-solid fa-lightbulb"></i> 効かせるコツ</span>
+                                    <p class="text-gray-300 mt-1 pl-4 border-l-2 border-cyan-400/40 leading-relaxed">${item.tip}</p>
+                                </div>
+                                <div class="bg-[#2d2d2d] p-2.5 rounded-lg text-xs text-gray-300 text-center font-bold">
+                                    🎯 ターゲット: ${item.target}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = cardsHtml;
+            }
+
+            countEl.textContent = `該当: ${filteredData.length} 種目`;
+            
+            let statusText = '';
+            if (currentAreaFilter !== 'all' || currentTypeFilter !== 'all' || currentSearchQuery !== '') {
+                statusText = 'フィルター適用中';
+            }
+            statusEl.textContent = statusText;
+        }
+
+        window.onload = function() {
+            renderWorkouts();
+        };
+    </script>
+</body>
+</html>
